@@ -1,38 +1,32 @@
-name: learn-github-actions
-run-name: ${{ github.actor }} is learning GitHub Actions
+name: Docker deploy
+
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [ 16.x ]
+    steps:
+      - uses: actions/checkout@v2
 
-    steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - name: Build and push images to Docker Registry
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker-compose build
+          docker-compose push
+
+      - name: Deploying containers using docker-compose
+        uses: appleboy/ssh-action@v0.1.10
+        env:
+          IMAGE_TAG: ${{ github.sha }}
         with:
-          node-version: ${{ matrix.node-version }}
-      - name: install modules
-        run: npm install
-      - name: build project
-        run: npm run build
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: executing remote ssh server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.HOST_NAME }}
-          username: ${{ secrets.USER_NAME }}
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: |
             cd ~/Github-action_testing
-            git pull origin main 
-            git status
+            sudo docker-compose up --build -d
