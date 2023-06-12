@@ -33,6 +33,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            cd /home/test-user/Github-Actions
+            cd ~/Github-action_testing
             git pull origin main 
             git status
