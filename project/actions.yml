@@ -28,5 +28,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            cd /Github-action_testing/project
+            cd ./Github-action_testing/project
             sudo docker-compose up --build -d
