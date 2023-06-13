@@ -27,6 +27,8 @@ jobs:
             ssh-add - <<<"${{ secrets.SSH_PRIVATE_KEY }}"
             ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST }} << EOF
               cd ~/Github-action_testing/project
+              sudo docker stop $(sudo docker ps -a -q)
+              sudo docker rm $(sudo docker ps -a -q)
               git pull
-              docker-compose up -d
+              sudo docker-compose up -d
             EOF
