@@ -13,21 +13,13 @@ jobs:
 
       - name: Deploying images to VM
         uses: appleboy/ssh-action@v0.1.10
-        env:
-          CR_REGISTRY: crpd1r3n8uh8in4v12sv
-          CR_REPOSITORY: git-hub-actions
-          IMAGE_TAG: ${{ github.sha }}
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.KEY }}
+          host: ${{ secrets.HOST_NAME }}
+          username: ${{ secrets.USER_NAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            ssh-agent -t 1h
-            ssh-add - <<<"${{ secrets.SSH_PRIVATE_KEY }}"
-            ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST }} << EOF
-              cd ~/Github-action_testing/project
-              sudo docker compose down
-              git pull
-              sudo docker compose up -d
-            EOF
+            cd ~/Github-action_testing/project
+            sudo docker compose down
+            git pull
+            sudo docker compose up -d
