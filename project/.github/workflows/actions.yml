@@ -2,6 +2,7 @@ name: Docker deploy
 
 on:
   push:
+    # Запускаем пайплайн при пушах в ветку hw6
     branches: [ "main" ]
 
 jobs:
@@ -9,17 +10,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Переходим в корень актуального состояния ветки
       - uses: actions/checkout@v2
 
-      - name: Deploying containers using docker-compose
+      # Авторизация в сервисе Yandex Cloud Container Registry
+      - name: Login to Yandex Cloud Container Registry
+        id: login-cr
+        uses: yc-actions/yc-cr-login@v1
+        with:
+          yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+
+      # Собираем и загружаем образы в реестр
+      - name: Build, tag, and push image to Yandex Cloud Container Registry
+        env:
+          CR_REGISTRY: crpf3tvmfa4lot7gl4jg
+          CR_REPOSITORY: git-hub-actions
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:auth$IMAGE_TAG /project/auth
+          docker push cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:auth$IMAGE_TAG
+          docker build -t cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:excahnge$IMAGE_TAG /project/exchange
+          docker push cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:exchange$IMAGE_TAG
+          docker build -t cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:gateway$IMAGE_TAG /project/gateway
+          docker push cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:gateway$IMAGE_TAG
+
+      # Запускаем собранные образы в виртуальной машине
+      - name: Deploying images to VM
         uses: appleboy/ssh-action@v0.1.10
         env:
+          CR_REGISTRY: crpf3tvmfa4lot7gl4jg
+          CR_REPOSITORY: git-hub-actions
           IMAGE_TAG: ${{ github.sha }}
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          key: ${{ secrets.KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            cd ./Github-action_testing/project
-            sudo docker-compose up --build -d
+          sudo docker kill $(docker ps -q) &> /dev/null
+          sudo docker rm $(docker ps -a -q) &> /dev/null
+          sudo docker run -dp 8000:8000 cr.yandex/crpf3tvmfa4lot7gl4jg/git-hub-actions:gateway${{ github.sha }} && sudo docker run --env MAIN_HOST=158.160.109.100 --env MAIN_PORT=8000 -dp 8001:8001 cr.yandex/crpf3tvmfa4lot7gl4jg/git-hub-actions:auth${{ github.sha }}
